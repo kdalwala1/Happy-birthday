@@ -1,73 +1,87 @@
-window.onload = () => {
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Load background
+const bg = new Image();
+bg.src = "bg.jpg";
+
+const stars = [];
+let revealProgress = 0;
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+
+// Create star dots along text
+function createTextStars(text, x, y, size) {
+  ctx.font = `${size}px cursive`;
+  ctx.fillStyle = "white";
+  ctx.fillText(text, x, y);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    if (imageData.data[i + 3] > 150 && Math.random() < 0.08) {
+      const px = (i / 4) % canvas.width;
+      const py = Math.floor(i / 4 / canvas.width);
+
+      stars.push({
+        x: px,
+        y: py,
+        alpha: 0,
+      });
+    }
   }
-  resize();
-  window.addEventListener("resize", resize);
+}
 
-  /* ---------- BACKGROUND ---------- */
-  function drawBackground() {
-    const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    g.addColorStop(0, "#050816");
-    g.addColorStop(0.5, "#1b1f5e");
-    g.addColorStop(1, "#ff8dcf");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
+// Animate
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  /* ---------- PARALLAX STARS ---------- */
-  const stars = [];
-  for (let i = 0; i < 150; i++) {
-    stars.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.5 + 0.5,
-      s: Math.random() * 0.4 + 0.1
-    });
-  }
+  // Background
+  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-  function drawStars() {
-    stars.forEach(star => {
-      star.y += star.s;
-      if (star.y > canvas.height) star.y = 0;
+  // Stars
+  stars.forEach((s, i) => {
+    if (i < revealProgress) {
+      s.alpha = Math.min(s.alpha + 0.05, 1);
 
       ctx.beginPath();
-      ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.arc(s.x, s.y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
       ctx.fill();
-    });
+    }
+  });
+
+  // Glowing reveal line
+  if (revealProgress > 1) {
+    ctx.beginPath();
+    ctx.moveTo(stars[0].x, stars[0].y);
+    for (let i = 1; i < revealProgress && i < stars.length; i++) {
+      ctx.lineTo(stars[i].x, stars[i].y);
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 1.2;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "white";
+    ctx.stroke();
+    ctx.shadowBlur = 0;
   }
 
-  /* ---------- TEXT ---------- */
-  let alpha = 0;
+  revealProgress += 2;
 
-  function drawText() {
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = "white";
-    ctx.font = "48px cursive";
-    ctx.textAlign = "center";
-    ctx.fillText("Happy Birthday", canvas.width / 2, canvas.height * 0.4);
+  requestAnimationFrame(animate);
+}
 
-    ctx.font = "72px cursive";
-    ctx.fillText("Karishma", canvas.width / 2, canvas.height * 0.55);
-    ctx.globalAlpha = 1;
-  }
-
-  /* ---------- LOOP ---------- */
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
-    drawStars();
-
-    if (alpha < 1) alpha += 0.01;
-    drawText();
-
-    requestAnimationFrame(animate);
-  }
-
+bg.onload = () => {
+  createTextStars("Happy Birthday", canvas.width * 0.18, canvas.height * 0.35, 80);
+  createTextStars("Karishma", canvas.width * 0.22, canvas.height * 0.5, 120);
   animate();
 };
